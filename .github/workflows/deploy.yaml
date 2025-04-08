@@ -1,0 +1,50 @@
+name: Build & Deploy api to kind
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout code
+        uses: action/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies 
+        run: |
+          python -m pip install --upgrade pip
+          pip install fastapi uvicorn
+
+      - name: Build Docker image
+        run: build --no-cache -t fastapi-app:v1.0 .
+
+      - name: Set up Kind Cluster
+        uses: helm/kind-action@v1
+
+      - name: Load Docker image into Kind
+        run: kind load docker-image fastapi-app:v1.0
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v1
+      
+      - name: Deploy to Kind
+        run: |
+          kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/secret.yaml
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
+
+
+      - name: Verify deployment
+        run: |
+          kubectl wait --for=condition=available --timeout=300s deployment/fastapi-app -n test-api-ns
+          kubectl port-forward service/fastapi-service 8080:80 -n test-api-ns &
+          sleep 5
+          curl http://localhost:8080/
+          curl http://localhost:8080/about/me
