@@ -2,7 +2,8 @@ name: Build & Deploy api to kind
 
 on:
   push:
-    branches: [main]
+    branches: 
+      - main
 
 jobs:
   build-and-deploy:
@@ -10,6 +11,9 @@ jobs:
     steps:
       - name: checkout code
         uses: action/checkout@v4
+        with:
+          repository: fastapi-kind-deployment/main
+          ref: main
       
       - name: Set up Python
         uses: actions/setup-python@v2
