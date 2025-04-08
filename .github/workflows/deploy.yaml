@@ -11,10 +11,7 @@ jobs:
     steps:
       - name: checkout code
         uses: actions/checkout@v4
-        with:
-          repository: fastapi-kind-deployment/main
-          ref: main
-      
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -26,13 +23,18 @@ jobs:
           pip install fastapi uvicorn
 
       - name: Build Docker image
-        run: build --no-cache -t fastapi-app:v1.0 .
+        run: docker build --no-cache -t fastapi-app:v1.0 .
 
       - name: Set up Kind Cluster
         uses: helm/kind-action@v1
+        with:
+          cluster_name: kind
 
       - name: Load Docker image into Kind
-        run: kind load docker-image fastapi-app:v1.0
+        run: |
+          docker images
+        
+          kind load docker-image fastapi-app:v1.0
 
       - name: Install kubectl
         uses: azure/setup-kubectl@v1
@@ -44,11 +46,15 @@ jobs:
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
 
-
       - name: Verify deployment
+        timeout-minutes: 15  # Increase overall timeout
         run: |
-          kubectl wait --for=condition=available --timeout=300s deployment/fastapi-app -n test-api-ns
-          kubectl port-forward service/fastapi-service 8080:80 -n test-api-ns &
-          sleep 5
-          curl http://localhost:8080/
-          curl http://localhost:8080/about/me
+          kubectl wait --for=condition=available --timeout=600s deployment/fastapi-app -n test-api-ns
+          POD_NAME=$(kubectl get pods -n test-api-ns -l app=fastapi-app \
+            --field-selector=status.phase=Running \
+            -o jsonpath="{.items[0].metadata.name}")
+          kubectl port-forward pod/$POD_NAME 8080:80 -n test-api-ns &
+          sleep 8
+          curl -v http://localhost:8080/
+          sleep 8
+          curl -v http://localhost:8080/about/me/
