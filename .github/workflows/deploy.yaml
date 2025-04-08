@@ -9,12 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
-        uses: action/checkout@v2
-        with:
-          repository: https://github.com/MohcineTor/fastapi-kind-deployment.git
+        uses: action/checkout@v4
       
       - name: Set up Python
-        uses: actions/checkout@v4
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
       
       - name: Install dependencies 
         run: |
