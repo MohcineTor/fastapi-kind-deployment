@@ -10,7 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: checkout code
-        uses: action/checkout@v4
+        uses: actions/checkout@v4
         with:
           repository: fastapi-kind-deployment/main
           ref: main
